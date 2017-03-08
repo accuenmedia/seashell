@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+
+#
+# install_airflow
+#
+# Install Airflow, with all Airflow packages
+
+# Set up a virtualenv for Airflow
+cd /opt/virtualenvs
+virtualenv airflow
+
+# Install libffi-dev
+# (required for Airflow's crypto package)
+sudo apt-get -y install libffi-dev
+
+# Make Airflow's home directory
+mkdir -p /opt/airflow
+echo export AIRFLOW_HOME=/opt/airflow >> /home/ubuntu/.bash_profile
+source /home/ubuntu/.bash_profile
+
+# Install Airflow, with all Airflow packages
+cd /opt/airflow
+/opt/virtualenvs/airflow/bin/pip install airflow[all] flask_bcrypt requests celery
+
+# Initialize the Airflow database
+/opt/virtualenvs/airflow/bin/airflow initdb
+
+# Add Airflow's binary directory to the $PATH, so that Airflow can find the binaries it depends on, like gunicorn
+echo PATH=\$PATH:/opt/virtualenvs/airflow/bin >> ~/.bash_profile
+source /home/ubuntu/.bash_profile
+
+# Make a script that can start Airflow with all environmental variables
+# (Perfect for use in non-interactive shells without Virtualenv's activate)
+cat << EOF | sudo tee /opt/airflow/start_airflow
+#!/usr/bin/env bash
+
+VIRTUAL_ENV="/opt/virtualenvs/airflow" PATH="\$VIRTUAL_ENV/bin:\$PATH" AIRFLOW_HOME=/opt/airflow /opt/virtualenvs/airflow/bin/airflow webserver -p 8080
+
+EOF
+sudo chown ubuntu:ubuntu /opt/airflow/start_airflow
+chmod +x /opt/airflow/start_airflow
+
+
+cat << EOF | sudo tee /etc/init/airflow-webserver.conf
+
+description "Airflow webserver daemon"
+
+start on started networking
+stop on (deconfiguring-networking or runlevel [016])
+
+respawn
+respawn limit 5 30
+
+setuid root
+setgid root
+
+env AIRFLOW_HOME=/opt/airflow
+export AIRFLOW_HOME
+
+env PATH=/opt/virtualenvs/airflow/bin:\$PATH
+
+exec /opt/virtualenvs/airflow/bin/airflow webserver -p 80
+
+
+EOF
+
+# This is how you start the Airflow web server as a logged-in user
+# sudo service airflow-webserver start

@@ -1,0 +1,61 @@
+#!/usr/bin/env bash
+
+#
+# install_python_2
+#
+# Set up a basic install of Python 2 (2.7.12, specifically), complete with setuptools, pip, and virtualenv
+# (Why would anyone want Python without setuptools, pip, and virtualenv?)
+#
+# This script builds Python without the following libraries; in the future, we should probably add them in:
+# - Tcl/Tk
+# - _bsddb
+# - _curses
+# - _curses_panel
+# - _tkinter
+# - bsddb185
+# - dbm
+# - dl
+# - gdbm
+# - imageop
+# - readline
+# - sunaudiodev
+#
+# Inspiration:
+# - https://www.digitalocean.com/community/tutorials/how-to-set-up-python-2-7-6-and-3-3-3-on-centos-6-4
+
+# If you want to be able to do 'import ____' and for it to work, you
+# better have these packages on your system before you compile Python
+sudo apt-get install -y zlib1g-dev libssl-dev libsqlite3-dev libbz2-dev
+
+# We're going to download and compile in a new /tmp/install_python_2 directory
+mkdir -p /tmp/install_python_2
+cd /tmp/install_python_2
+
+# Download the Python 2.7.12 source
+curl -O https://www.python.org/ftp/python/2.7.12/Python-2.7.12.tar.xz
+
+# "Unzip" the Python source
+xz -d Python-2.7.12.tar.xz
+tar -xvf Python-2.7.12.tar
+
+# Configure, build, and install Python
+cd /tmp/install_python_2/Python-2.7.12
+./configure --prefix=/usr/local
+make
+sudo make altinstall
+cd /tmp/install_python_2
+
+# Install setuptools
+curl https://bootstrap.pypa.io/ez_setup.py -o - | sudo /usr/local/bin/python2.7
+
+# Install pip
+curl https://bootstrap.pypa.io/get-pip.py | sudo /usr/local/bin/python2.7
+
+# Install virtualenv
+sudo /usr/local/bin/pip install virtualenv
+
+# Create a directory for virtualenv's to live in
+mkdir -p /opt/virtualenvs
+
+# Clean up the /tmp/install_python_2 folder since we're done with it
+rm -rf /tmp/install_python_2
