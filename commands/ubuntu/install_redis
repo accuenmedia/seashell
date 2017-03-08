@@ -156,8 +156,7 @@ loglevel notice
 daemonize no
 supervised no
 
-# Force logging to stdout
-logfile ""
+logfile "/var/log/redis/redis-server.log"
 
 # Create as many databases as specified
 databases $number_of_databases
@@ -224,19 +223,28 @@ sudo sysctl --system
 # Turn off THP (Transparent Huge Pages), which can cause latency in Redis
 sudo apt -y install hugepages
 
-cat << EOF | sudo tee /etc/redis/turn_off_transparent_hugepage
-#!/usr/bin/env bash
 
-# Turn off THP (Transparent Huge Pages), which can cause latency in Redis
 
-echo never | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
 
+cat << EOF | sudo tee /etc/init/redis-server.conf
+description "redis server"
+
+start on runlevel [23]
+stop on shutdown
+
+exec sudo /usr/local/bin/redis-server /etc/redis/redis.conf
+
+pre-start script
+    echo never | sudo tee /sys/kernel/mm/transparent_hugepage/enabled
+end script
+
+respawn
 EOF
 
-sudo update-rc.d /etc/redis/system/turn_off_transparent_hugepage defaults 99 01
+
 
 
 # Clean up the /tmp/install_redis folder since we're done with it
-# rm -rf /tmp/install_redis
+rm -rf /tmp/install_redis
 
-# N.B. Start redis with redis-server /etc/redis/redis.conf
+# N.B. Start redis with service redis-server start
